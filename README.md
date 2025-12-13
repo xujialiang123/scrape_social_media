@@ -46,6 +46,9 @@ pip install -r requirements.txt
 - 需要申请Twitter开发者账号和API凭证
 - 有速率限制
 - 免费版本功能受限
+- **重要**：`search_recent_tweets` API仅能搜索过去7天的数据
+  - 如需2025年历史数据，需要Academic Research访问权限（Full Archive Search）
+  - 或者在2025年实际运行此脚本
 
 #### 1.1 获取Twitter API凭证
 

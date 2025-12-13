@@ -78,12 +78,20 @@ class TwitterScraperTweepy:
         
         Returns:
             list: List of tweet dictionaries
+        
+        Note:
+            - search_recent_tweets only searches the past 7 days by default
+            - For historical data or data from specific dates in 2025, you need:
+              1. Academic Research access for Full Archive Search, OR
+              2. To run this code during the actual date period
+            - When running in 2025, remove or adjust start_time parameter
         """
         tweets_data = []
         
         try:
             # Search recent tweets with the query
-            # Note: For 2025 data, this assumes the code runs in or after 2025
+            # Note: This works when running in 2025. For historical 2025 data,
+            # you need Full Archive Search API (Academic Research access)
             tweets = self.client.search_recent_tweets(
                 query=query,
                 max_results=max_results,
@@ -200,6 +208,12 @@ def main():
     print("=" * 60)
     print("Twitter Scraper using Tweepy")
     print("Scraping domestic and international situation data for 2025")
+    print("=" * 60)
+    print("\nIMPORTANT API LIMITATIONS:")
+    print("- search_recent_tweets API only searches the past 7 days")
+    print("- To collect 2025 data, run this script during 2025")
+    print("- For historical archive search, you need Academic Research access")
+    print("- Consider using snscrape for more flexible date ranges")
     print("=" * 60)
     
     # Check for bearer token
