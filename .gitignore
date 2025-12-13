@@ -29,6 +29,11 @@ wheels/
 *.xlsx
 *.parquet
 
+# Example outputs
+example_*.csv
+example_*.json
+custom_results.*
+
 # IDE
 .vscode/
 .idea/
