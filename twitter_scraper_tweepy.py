@@ -12,6 +12,10 @@ import json
 import os
 
 
+# Default start date for 2025 data collection
+DEFAULT_START_DATE = "2025-01-01T00:00:00Z"
+
+
 class TwitterScraperTweepy:
     """
     Twitter scraper using Tweepy library for collecting data about
@@ -67,7 +71,7 @@ class TwitterScraperTweepy:
         ]
         return queries
     
-    def scrape_tweets(self, query, max_results=100, start_time="2025-01-01T00:00:00Z"):
+    def scrape_tweets(self, query, max_results=100, start_time=DEFAULT_START_DATE):
         """
         Scrape tweets based on a search query
         
@@ -108,7 +112,7 @@ class TwitterScraperTweepy:
             }
             
             # Only add start_time if it's recent enough
-            if start_time and start_time != "2025-01-01T00:00:00Z":
+            if start_time and start_time != DEFAULT_START_DATE:
                 try:
                     start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
                     if start_dt >= seven_days_ago:
