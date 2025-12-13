@@ -217,6 +217,21 @@ class TwitterScraperSnscrape:
         
         return df
     
+    @staticmethod
+    def _format_hashtags_for_csv(hashtags):
+        """
+        Format hashtags list for CSV export
+        
+        Args:
+            hashtags: List of hashtags, or None
+        
+        Returns:
+            str: Comma-separated hashtags or empty string
+        """
+        if isinstance(hashtags, list) and hashtags:
+            return ','.join(hashtags)
+        return ''
+    
     def save_to_csv(self, df, filename='twitter_data_snscrape_2025.csv'):
         """
         Save scraped data to CSV file
@@ -229,9 +244,7 @@ class TwitterScraperSnscrape:
             # Convert date to string for CSV compatibility
             df_copy = df.copy()
             df_copy['date'] = df_copy['date'].astype(str)
-            df_copy['hashtags'] = df_copy['hashtags'].apply(
-                lambda x: ','.join(x) if isinstance(x, list) and x else '' if x is not None else ''
-            )
+            df_copy['hashtags'] = df_copy['hashtags'].apply(self._format_hashtags_for_csv)
             
             df_copy.to_csv(filename, index=False, encoding='utf-8-sig')
             print(f"Data saved to {filename}")
