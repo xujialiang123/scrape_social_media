@@ -175,8 +175,33 @@ scrape_social_media/
 ├── requirements.txt              # 依赖包
 ├── twitter_scraper_tweepy.py    # tweepy实现
 ├── twitter_scraper_snscrape.py  # snscrape实现
+├── examples.py                   # 使用示例
 └── README.md                     # 说明文档
 ```
+
+## 使用示例 / Examples
+
+提供了 `examples.py` 文件展示如何使用这两个爬虫：
+
+```bash
+# 运行所有示例
+python examples.py
+
+# 只运行tweepy示例
+python examples.py tweepy
+
+# 只运行snscrape示例
+python examples.py snscrape
+
+# 运行自定义实现示例
+python examples.py custom
+```
+
+示例包括：
+1. **基础使用** - 如何初始化和运行爬虫
+2. **自定义查询** - 如何使用自定义搜索词
+3. **数据处理** - 如何分析和筛选结果
+4. **保存数据** - 如何导出为CSV/JSON
 
 ## 示例输出 / Example Output
 
