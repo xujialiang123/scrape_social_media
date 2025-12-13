@@ -144,7 +144,7 @@ class TwitterScraperSnscrape:
                     'like_count': tweet.likeCount if hasattr(tweet, 'likeCount') else 0,
                     'quote_count': tweet.quoteCount if hasattr(tweet, 'quoteCount') else 0,
                     'language': tweet.lang if hasattr(tweet, 'lang') else None,
-                    'hashtags': list(tweet.hashtags) if tweet.hashtags else [],
+                    'hashtags': list(tweet.hashtags) if tweet.hashtags is not None else [],
                     'query': query
                 }
                 tweets_data.append(tweet_dict)
@@ -230,7 +230,7 @@ class TwitterScraperSnscrape:
             df_copy = df.copy()
             df_copy['date'] = df_copy['date'].astype(str)
             df_copy['hashtags'] = df_copy['hashtags'].apply(
-                lambda x: ','.join(x) if isinstance(x, list) and x else ''
+                lambda x: ','.join(x) if isinstance(x, list) and x else '' if x is not None else ''
             )
             
             df_copy.to_csv(filename, index=False, encoding='utf-8-sig')
