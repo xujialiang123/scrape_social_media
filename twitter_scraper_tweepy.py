@@ -92,14 +92,31 @@ class TwitterScraperTweepy:
             # Search recent tweets with the query
             # Note: This works when running in 2025. For historical 2025 data,
             # you need Full Archive Search API (Academic Research access)
-            tweets = self.client.search_recent_tweets(
-                query=query,
-                max_results=max_results,
-                tweet_fields=['created_at', 'public_metrics', 'author_id', 'lang', 'entities'],
-                user_fields=['username', 'name', 'verified', 'public_metrics'],
-                expansions=['author_id'],
-                start_time=start_time
-            )
+            
+            # Only include start_time if it's within the last 7 days
+            from datetime import datetime, timezone, timedelta
+            current_time = datetime.now(timezone.utc)
+            seven_days_ago = current_time - timedelta(days=7)
+            
+            # Parse start_time if provided
+            search_params = {
+                'query': query,
+                'max_results': max_results,
+                'tweet_fields': ['created_at', 'public_metrics', 'author_id', 'lang', 'entities'],
+                'user_fields': ['username', 'name', 'verified', 'public_metrics'],
+                'expansions': ['author_id']
+            }
+            
+            # Only add start_time if it's recent enough
+            if start_time and start_time != "2025-01-01T00:00:00Z":
+                try:
+                    start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                    if start_dt >= seven_days_ago:
+                        search_params['start_time'] = start_time
+                except ValueError:
+                    pass  # Invalid date format, skip start_time
+            
+            tweets = self.client.search_recent_tweets(**search_params)
             
             # Create a dictionary to map user IDs to user data
             users = {}
