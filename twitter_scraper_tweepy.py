@@ -29,7 +29,7 @@ class TwitterScraperTweepy:
         Args:
             bearer_token: Twitter API v2 Bearer Token
         """
-        self.bearer_token = bearer_token or os.environ.get('TWITTER_BEARER_TOKEN')
+        self.bearer_token = bearer_token or os.environ.get('AAAAAAAAAAAAAAAAAAAAADtZ6AEAAAAAktDWxHI2FRKCLDTpShP9RZsYhzc%3DkkBUewuAchQZ4WeCekwZLIyPAnCfYrD5cSuwTkzsYwqQunhneq')
         
         if not self.bearer_token:
             raise ValueError("Bearer token is required. Set TWITTER_BEARER_TOKEN environment variable or pass it directly.")
@@ -238,7 +238,7 @@ def main():
     print("=" * 60)
     
     # Check for bearer token
-    bearer_token = os.environ.get('TWITTER_BEARER_TOKEN')
+    bearer_token = os.environ.get('AAAAAAAAAAAAAAAAAAAAADtZ6AEAAAAAktDWxHI2FRKCLDTpShP9RZsYhzc%3DkkBUewuAchQZ4WeCekwZLIyPAnCfYrD5cSuwTkzsYwqQunhneq')
     
     if not bearer_token:
         print("\nERROR: TWITTER_BEARER_TOKEN environment variable not set.")
