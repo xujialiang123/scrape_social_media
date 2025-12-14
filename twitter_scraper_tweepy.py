@@ -44,35 +44,42 @@ class TwitterScraperTweepy:
 
     def get_search_queries(self):
         """
-        Define search queries for domestic and international situations
-        Focused on China, US, Japan and other major countries
-
-        Returns:
-            list: List of search query strings
+        Queries for current domestic/international situation.
+        Only Chinese and English; exclude retweets.
         """
         queries = [
-            # China domestic situation
-            "中国 (政治 OR 经济 OR 社会) -is:retweet lang:zh",
-            "China (politics OR economy OR society) -is:retweet lang:en",
+            # China
+            "中国 (外交 OR 国防 OR 军演 OR 台海 OR 南海 OR 制裁 OR 关税 OR 芯片 OR 反制) -is:retweet lang:zh",
+            "中美 (关系 OR 对抗 OR 会谈 OR 竞争 OR 制裁 OR 科技战 OR 贸易战) -is:retweet lang:zh",
+            "China (foreign policy OR defense OR military drill OR Taiwan OR South China Sea OR sanctions OR tariff OR semiconductor) -is:retweet lang:en",
+            "US China (relations OR tensions OR sanctions OR trade war OR tech war) -is:retweet lang:en",
 
-            # US domestic situation
-            "美国 (政治 OR 经济 OR 社会) -is:retweet lang:zh",
-            "USA (politics OR economy OR society) -is:retweet lang:en",
-            "America (domestic OR policy) -is:retweet lang:en",
+            # Japan
+            "日本 (安保 OR 自卫队 OR 防卫预算 OR 修宪 OR 对华 OR 对美 OR 台海) -is:retweet lang:zh",
+            "Japan (security OR Self-Defense Forces OR defense budget OR constitutional revision OR Taiwan) -is:retweet lang:en",
 
-            # Japan domestic situation
-            "日本 (政治 OR 経済 OR 社会) -is:retweet",
-            "Japan (politics OR economy OR society) -is:retweet lang:en",
+            # Korea (ROK + DPRK)
+            "韩国 (总统 OR 选举 OR 国会 OR 示威 OR 对朝 OR 军演 OR 美韩同盟) -is:retweet lang:zh",
+            "朝鲜 (核试验 OR 导弹 OR 半岛局势 OR 美韩军演) -is:retweet lang:zh",
+            "South Korea (election OR parliament OR protest OR security OR alliance) -is:retweet lang:en",
+            "North Korea (missile OR nuclear test OR Korean peninsula OR deterrence) -is:retweet lang:en",
 
-            # International relations
-            "国际局势 -is:retweet lang:zh",
-            "international situation (China OR USA OR Japan) -is:retweet lang:en",
-            "geopolitics Asia -is:retweet lang:en",
+            # US
+            "美国 (大选 OR 国会 OR 政府关门 OR 制裁 OR 对华 OR 对俄 OR 对伊朗) -is:retweet lang:zh",
+            "US (election OR Congress OR shutdown OR sanctions OR China OR Russia OR Iran) -is:retweet lang:en",
+            "US (Indo-Pacific strategy OR AUKUS OR NATO OR deterrence) -is:retweet lang:en",
 
-            # Other major countries
-            "European Union (politics OR economy) -is:retweet lang:en",
-            "Russia (international OR relations) -is:retweet lang:en",
-            "India (politics OR economy) -is:retweet lang:en",
+            # EU / Europe
+            "欧盟 (制裁 OR 对俄 OR 对华 OR 关税 OR 芯片 OR 供应链 OR 防务) -is:retweet lang:zh",
+            "欧洲 (俄乌 OR 乌克兰 OR 北约 OR 军援 OR 能源安全) -is:retweet lang:zh",
+            "European Union (sanctions OR Russia OR China OR tariff OR supply chain OR defense) -is:retweet lang:en",
+            "Europe (Ukraine OR Russia OR NATO OR military aid OR energy security) -is:retweet lang:en",
+
+            # General geopolitics
+            "国际局势 (俄乌 OR 以色列 OR 巴勒斯坦 OR 红海 OR 航运 OR 军事升级) -is:retweet lang:zh",
+            "地缘政治 (亚洲 OR 印太 OR 军事 OR 冲突 OR 危机) -is:retweet lang:zh",
+            "geopolitics (Indo-Pacific OR Asia OR conflict OR crisis) -is:retweet lang:en",
+            "global security (Ukraine OR Middle East OR Red Sea OR shipping) -is:retweet lang:en",
         ]
         return queries
 
