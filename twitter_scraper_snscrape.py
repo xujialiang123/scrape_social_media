@@ -4,11 +4,21 @@ Twitter Scraper using snscrape Library
 Scrapes Twitter data about domestic and international situations
 Focus on topics related to China, Japan, Korea, US, EU
 Outputs JSONL for LLM training
+
+Features:
+- Streams results to TWO single JSONL files (append mode):
+  - raw.jsonl: full metadata
+  - text.jsonl: minimal training-friendly schema
+- Cross-run deduplication:
+  - Loads existing IDs from raw.jsonl at startup and skips duplicates
+- Preserves partial progress even if interrupted (flush after each write)
 """
 
 import snscrape.modules.twitter as sntwitter
 import pandas as pd
 import json
+import os
+from typing import Optional, Set
 
 
 class TwitterScraperSnscrape:
@@ -81,32 +91,104 @@ class TwitterScraperSnscrape:
         ]
         return queries
 
-    def scrape_tweets(self, query, max_results=200, start_date="2025-01-01", end_date=None):
-        """
-        Scrape tweets based on a search query string. The query string can include
-        Twitter advanced search operators like lang:, since:, until:.
+    def _build_search_query(self, query, start_date, end_date):
+        # snscrape uses Twitter advanced search operators inside the query string.
+        if end_date:
+            return f"{query} since:{start_date} until:{end_date}"
+        return f"{query} since:{start_date}"
 
-        We append since/until operators here to ensure date filtering.
+    @staticmethod
+    def _to_text_record(raw_record: dict) -> dict:
+        return {
+            "id": raw_record.get("id"),
+            "text": raw_record.get("text", ""),
+            "date": raw_record.get("date"),
+            "lang": raw_record.get("language"),
+            "query": raw_record.get("query"),
+            "source": raw_record.get("source", "snscrape"),
+            "url": raw_record.get("url"),
+        }
+
+    @staticmethod
+    def load_existing_ids(jsonl_path: str) -> Set[int]:
+        """
+        Load existing tweet IDs from an existing JSONL file.
+        Used for cross-run deduplication.
+
+        Notes:
+        - Expects each line is a JSON object with an `id` field.
+        - Skips malformed lines.
+        """
+        seen: Set[int] = set()
+        if not jsonl_path or not os.path.exists(jsonl_path):
+            return seen
+
+        total = 0
+        bad = 0
+        with open(jsonl_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                total += 1
+                try:
+                    obj = json.loads(line)
+                    tid = obj.get("id")
+                    if tid is None:
+                        continue
+                    # Ensure int-ish (some tools may store as str)
+                    tid = int(tid)
+                    seen.add(tid)
+                except Exception:
+                    bad += 1
+                    continue
+
+        print(f"Loaded {len(seen)} existing ids from {jsonl_path} (lines={total}, bad_lines={bad})")
+        return seen
+
+    def scrape_and_append_jsonl(
+        self,
+        query: str,
+        raw_fp,
+        text_fp,
+        max_results: int = 200,
+        start_date: str = "2025-01-01",
+        end_date: Optional[str] = None,
+        seen_ids: Optional[Set[int]] = None,
+    ):
+        """
+        Scrape tweets for a query and append each record to open JSONL file handles.
+        Writes BOTH raw and text records per tweet.
 
         Returns:
-            list[dict]
+            (tweets_data, seen_ids)
         """
+        if seen_ids is None:
+            seen_ids = set()
+
         tweets_data = []
-
-        if end_date:
-            search_query = f"{query} since:{start_date} until:{end_date}"
-        else:
-            search_query = f"{query} since:{start_date}"
-
+        search_query = self._build_search_query(query, start_date, end_date)
         print(f"Scraping query: {search_query}")
 
-        tweet_count = 0
+        count_written = 0
+        count_skipped_dup = 0
         try:
             for tweet in sntwitter.TwitterSearchScraper(search_query).get_items():
-                if tweet_count >= max_results:
+                if count_written >= max_results:
                     break
 
-                tweet_dict = {
+                tweet_id = getattr(tweet, "id", None)
+                if tweet_id is not None:
+                    try:
+                        tweet_id = int(tweet_id)
+                    except Exception:
+                        tweet_id = None
+
+                if tweet_id is not None and tweet_id in seen_ids:
+                    count_skipped_dup += 1
+                    continue
+
+                raw_record = {
                     "id": tweet.id,
                     "url": tweet.url,
                     "date": str(tweet.date),
@@ -125,44 +207,82 @@ class TwitterScraperSnscrape:
                     "source": "snscrape",
                 }
 
-                # Fallback language filter: keep only zh/en
-                lang = tweet_dict.get("language")
+                # Fallback language filter: keep only zh/en (allow None)
+                lang = raw_record.get("language")
                 if lang not in (None, "zh", "en"):
                     continue
 
-                tweets_data.append(tweet_dict)
-                tweet_count += 1
+                # Write raw + text (streaming append)
+                raw_fp.write(json.dumps(raw_record, ensure_ascii=False) + "\n")
+                text_fp.write(json.dumps(self._to_text_record(raw_record), ensure_ascii=False) + "\n")
 
-            print(f"Scraped {len(tweets_data)} tweets")
+                raw_fp.flush()
+                text_fp.flush()
+
+                if tweet_id is not None:
+                    seen_ids.add(tweet_id)
+
+                tweets_data.append(raw_record)
+                count_written += 1
+
+            print(f"Appended {count_written} tweets (skipped duplicates: {count_skipped_dup})")
         except Exception as e:
             print(f"Error scraping tweets for query '{query}': {e}")
 
-        return tweets_data
+        return tweets_data, seen_ids
 
-    def scrape_all_queries(self, max_results_per_query=200, start_date="2025-01-01", end_date=None):
-        all_tweets = []
+    def scrape_all_queries_streaming(
+        self,
+        raw_jsonl: str = "twitter_snscrape_raw.jsonl",
+        text_jsonl: str = "twitter_snscrape_text.jsonl",
+        max_results_per_query: int = 200,
+        start_date: str = "2025-01-01",
+        end_date: Optional[str] = None,
+        dedup_from: str = "raw",  # "raw" or "text"
+    ):
+        """
+        Scrape all queries and append results to two JSONL files as we go.
+        Cross-run dedup is done by loading existing ids from raw_jsonl (default).
+
+        Returns:
+            DataFrame of records collected in THIS run (for summary only).
+        """
         queries = self.get_search_queries()
 
+        # Cross-run dedup: load ids from existing file
+        id_source = raw_jsonl if dedup_from == "raw" else text_jsonl
+        seen_ids = self.load_existing_ids(id_source)
+
+        all_tweets = []
+
         print(f"\n{'=' * 60}")
-        print(f"Starting to scrape {len(queries)} queries...")
+        print(f"Starting to scrape {len(queries)} queries (streaming JSONL)...")
         print(f"Date range: {start_date} -> {end_date or 'now'}")
         print(f"Max results per query: {max_results_per_query}")
+        print(f"RAW output:  {os.path.abspath(raw_jsonl)}")
+        print(f"TEXT output: {os.path.abspath(text_jsonl)}")
+        print(f"Dedup: load existing ids from: {os.path.abspath(id_source)}")
         print(f"{'=' * 60}\n")
 
-        for i, query_dict in enumerate(queries, 1):
-            print(f"\nQuery {i}/{len(queries)}: {query_dict['description']}")
-            tweets = self.scrape_tweets(
-                query_dict["query"],
-                max_results=max_results_per_query,
-                start_date=start_date,
-                end_date=end_date,
-            )
-            all_tweets.extend(tweets)
-            print(f"Total tweets collected so far: {len(all_tweets)}")
+        # append mode: keep existing files and continue (dedup will prevent duplicates)
+        with open(raw_jsonl, "a", encoding="utf-8") as raw_fp, open(text_jsonl, "a", encoding="utf-8") as text_fp:
+            for i, q in enumerate(queries, 1):
+                print(f"\nQuery {i}/{len(queries)}: {q['description']}")
+                tweets, seen_ids = self.scrape_and_append_jsonl(
+                    q["query"],
+                    raw_fp,
+                    text_fp,
+                    max_results=max_results_per_query,
+                    start_date=start_date,
+                    end_date=end_date,
+                    seen_ids=seen_ids,
+                )
+                all_tweets.extend(tweets)
+                print(f"Total tweets collected in this run so far: {len(all_tweets)}")
 
         df = pd.DataFrame(all_tweets)
         if df.empty:
-            print("\nNo tweets found.")
+            print("\nNo tweets found in this run.")
             return df
 
         df["engagement_score"] = (
@@ -171,48 +291,22 @@ class TwitterScraperSnscrape:
             + df.get("reply_count", 0)
             + df.get("quote_count", 0)
         )
-
         df = df.sort_values("engagement_score", ascending=False)
         df = df.drop_duplicates(subset=["id"], keep="first")
-
-        print(f"\nTotal unique tweets scraped: {len(df)}")
+        print(f"\nTotal unique tweets collected in this run: {len(df)}")
         return df
-
-    def save_to_jsonl(self, df, filename="twitter_data_snscrape.jsonl", text_only=True):
-        """
-        Save JSON Lines for LLM training.
-        If text_only=True: minimal schema.
-        """
-        if df.empty:
-            print("No data to save.")
-            return
-
-        with open(filename, "w", encoding="utf-8") as f:
-            for _, row in df.iterrows():
-                rec = row.to_dict()
-                if text_only:
-                    out = {
-                        "id": rec.get("id"),
-                        "text": rec.get("text", ""),
-                        "date": rec.get("date"),
-                        "lang": rec.get("language"),
-                        "query": rec.get("query"),
-                        "source": rec.get("source", "snscrape"),
-                        "url": rec.get("url"),
-                    }
-                else:
-                    out = rec
-                f.write(json.dumps(out, ensure_ascii=False) + "\n")
-
-        print(f"Data saved to {filename} (jsonl, text_only={text_only})")
 
 
 def main():
     scraper = TwitterScraperSnscrape()
-    df = scraper.scrape_all_queries(max_results_per_query=200, start_date="2025-01-01")
-    if not df.empty:
-        scraper.save_to_jsonl(df, filename="twitter_snscrape_text.jsonl", text_only=True)
-        scraper.save_to_jsonl(df, filename="twitter_snscrape_raw.jsonl", text_only=False)
+    scraper.scrape_all_queries_streaming(
+        raw_jsonl="twitter_snscrape_raw.jsonl",
+        text_jsonl="twitter_snscrape_text.jsonl",
+        max_results_per_query=200,
+        start_date="2025-01-01",
+        end_date=None,
+        dedup_from="raw",
+    )
 
 
 if __name__ == "__main__":
