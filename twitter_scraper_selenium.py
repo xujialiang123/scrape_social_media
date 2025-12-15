@@ -6,27 +6,20 @@ Twitter (X) Scraper using Selenium
 支持断点续爬和去重机制
 """
 
-import json
 import jsonlines
 import logging
-import os
 import time
 import urllib.parse
-from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Set, Optional
 
 from selenium import webdriver
-from selenium.webdriver.edge.service import Service
 from selenium.webdriver.edge.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import (
-    TimeoutException,
     NoSuchElementException,
-    StaleElementReferenceException,
-    WebDriverException
+    StaleElementReferenceException
 )
 
 # 配置日志
